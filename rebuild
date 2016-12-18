@@ -1,0 +1,24 @@
+#kernelのビルド
+$ rpmdev-setuptree
+$ cd ~/rpm-build/SOURCE
+ フォルダはどこでもいい気がする
+$ wget https://"どっかのサイト"/"好みのバージョン".
+$ tar Jxf "ダウンロードしたファイル" (オプションは拡張子によって選択)
+$ cd "解凍したフォルダ"
+$ make clean; make mrproper
+$ cp /boot/config-`uname -r` .config
+$ make oldconfig
+# make
+# make modules_install
+# make install
+
+ソースをいじった後
+# make
+# make modules_install
+# make install
+
+特定のモジュールだけmake
+# cd "目的のモジュールがあるディレクトリ"
+# make -C "カーネルソースの一番上" M=`pwd`
+# make -C "カーネルソースの一番上" M=`pwd` modules_install
+# make -C "カーネルソースの一番上" M=`pwd` install
