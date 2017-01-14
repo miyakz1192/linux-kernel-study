@@ -1,2 +1,2 @@
 # linux-kernel-study
- repository for study
+ for study linux kernel
