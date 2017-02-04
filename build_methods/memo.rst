@@ -31,6 +31,7 @@ kernel.orgからカーネルを持ってきてそれをそのままコンパイ�
 以下、rootで作業します(最終的にカーネルソースをインストールするので)
 
 最初に、作業用のrpmbuildディレクトリを作成する。::
+
   [root@centos7 ~]# cd ~
   [root@centos7 ~]# mkdir rpmbuild
   [root@centos7 ~]# 
