@@ -2,6 +2,30 @@
 Linux kernelの再コンパイル方法
 ====================================================
 
+目的
+=====
+
+CentOSのカーネルをコンパイルし、デバッグコードを仕込みながらカーネルの動作を
+追う方法について記載します。
+
+
+手順概要
+==========
+
+kernel.orgからカーネルを持ってきてそれをそのままコンパイルする方法だと、CentOSの
+カーネルパッチが当たらない。このため、kernel.orgのカーネル動作と、CentOSカーネル
+動作に差が生まれる。その動作の差が、カーネルの動作検証を妨げる可能性が懸念される。
+このため、一度、CentOSのカーネル構築手順でカーネルを作成し、それをベースに
+オリジナルのデバッグコードを仕込む方法を取る。
+
+再コンパイル、動作検証のデバッグコード仕込みまでは以下の手順で行われる。
+
+1) 対象CentOSシステムのカーネルrpmをビルドする。この作業によって、CentOSのカーネルパッチが適用されたカーネルソースが手に入る
+2) 1) に手を加えて、システムにインストールする
+
+手順詳細1(CentOSのカーネルrpmをビルド)
+==========================================
+
 以下、rootで作業します(最終的にカーネルソースをインストールするので)
 
 最初に、作業用のrpmbuildディレクトリを作成する。::
@@ -50,6 +74,56 @@ Linux kernelの再コンパイル方法
 
   [root@centos7 rpmbuild]# yum-builddep SPECS/kernel.spec
   rpmbuild -bb --target=`uname -m` --with kdump --without debug --without tools --without perf SPECS/kernel.spec
+
+2時間くらいかかるため、散歩に行ってもよい。
+
+手順詳細2(デバッグコードを入れてシステムにインストールする)
+==============================================================
+
+カーネルソースのディレクトリに行く。::
+
+  # cd /root/rpmbuild/BUILD/kernel-3.10.0-327.el7/linux-3.10.0-327.el7.centos.local2.x86_64/
+
+以下のような編集を入れてみる。この編集はIPv4の受信関数の先頭でシスログにメッセージを出力するものである。::
+    
+  [root@centos7 linux-3.10.0-327.el7.centos.local2.x86_64]# diff -u /root/rpmbuild.org/BUILD/kernel-3.10.0-327.el7/linux-3.10.0-327.el7.centos.local2.x86_64/net/ipv4/ip_input.c /root/rpmbuild/BUILD/kernel-3.10.0-327.el7/linux-3.10.0-327.el7.centos.local2.x86_64/net/ipv4/ip_input.c
+  --- /root/rpmbuild.org/BUILD/kernel-3.10.0-327.el7/linux-3.10.0-327.el7.centos.local2.x86_64/net/ipv4/ip_input.c  2015-10-30 05:56:51.000000000 +0900
+  +++ /root/rpmbuild/BUILD/kernel-3.10.0-327.el7/linux-3.10.0-327.el7.centos.local2.x86_64/net/ipv4/ip_input.c  2017-02-04 23:42:57.722000000 +0900
+  @@ -378,10 +378,14 @@
+   {
+    const struct iphdr *iph;
+    u32 len;
+  + static int miyakz=0;
+   
+    /* When the interface is in promisc. mode, drop all the crap
+     * that it receives, do not try to analyse it.
+     */
+  +
+  +   printk("miyakz debug %d\n", miyakz++);
+  +
+    if (skb->pkt_type == PACKET_OTHERHOST)
+      goto drop;
+   
+  @@ -464,3 +468,4 @@
+   out:
+    return NET_RX_DROP;
+   }
+  +
+  [root@centos7 linux-3.10.0-327.el7.centos.local2.x86_64]# 
+
+次にカーネルのコンパイルとインストールを実施する。
+カーネルがlocal2でインストールされる(以下の3コマンド合計で10分くらい) 。::
+
+  make ; make modules_install ; make install
+  
+システムを再起動し、起動カーネルとして"vmlinuz-3.10.0-327.el7.centos.local2.x86_64"を選択する。
+
+実行結果を確認する。何らかのIP通信をさせて、/var/log/messagesにメッセージが出力されていることを確認する::
+
+  [root@centos7 linux-3.10.0-327.el7.centos.local2.x86_64]# tail /var/log/messages
+  Feb  5 01:46:28 centos7 kernel: miyakz debug 5184
+  Feb  5 01:46:28 centos7 kernel: miyakz debug 5185
+
 
 参考URL
 ========
